@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ELIGMA CALCULATOR</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@0,700;1,700&display=swap');
+
+        :root {
+            --ba-blue: #00bbff;
+            --ba-light-blue: #e6f7ff;
+            --ba-dark-blue: #123456;
+            --eligma-purple: #ba8bc6;
+            --bg-white: #f4f7f9;
+            --glass: rgba(255, 255, 255, 0.9);
+            --schale-gray: #5b6d81;
+        }
+
+        * {
+            box-sizing: border-box;
+            user-select: none;
+        }
+
+        body {
+            background-color: var(--bg-white);
+            background-image: 
+                radial-gradient(circle at 2px 2px, #e1e8ed 1px, transparent 0);
+            background-size: 24px 24px;
+            color: var(--schale-gray);
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .app-container {
+            width: 100%;
+            max-width: 500px;
+            background: var(--glass);
+            backdrop-filter: blur(10px);
+            border: 2px solid #fff;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .header {
+            border-bottom: 3px solid var(--ba-blue);
+            padding-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+        }
+
+        .header-title {
+            font-family: 'Exo 2', sans-serif;
+            font-size: 1.4rem;
+            font-style: italic;
+            color: var(--ba-blue);
+            text-transform: uppercase;
+        }
+
+        .header-sub {
+            font-size: 10px;
+            color: var(--ba-blue);
+            text-align: right;
+        }
+
+        /* Result Panel */
+        .result-panel {
+            background: white;
+            border: 1px solid #d1dee7;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            box-shadow: 4px 4px 0px var(--ba-blue);
+        }
+
+        .result-label {
+            font-size: 12px;
+            font-weight: bold;
+            color: var(--ba-blue);
+            margin-bottom: 8px;
+        }
+
+        .result-main {
+            display: flex;
+            justify-content: center;
+            align-items: baseline;
+            gap: 8px;
+        }
+
+        .result-value {
+            font-family: 'Exo 2', sans-serif;
+            font-size: 3.5rem;
+            color: var(--ba-dark-blue);
+            line-height: 1;
+        }
+
+        .result-unit {
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+
+        /* Input Sections */
+        .section-title {
+            font-size: 13px;
+            font-weight: bold;
+            color: white;
+            background: var(--ba-blue);
+            padding: 4px 12px;
+            border-radius: 4px;
+            display: inline-block;
+            margin-bottom: 12px;
+        }
+
+        .input-card {
+            background: rgba(255,255,255,0.6);
+            border: 1px solid #e1e8ed;
+            border-radius: 8px;
+            padding: 16px;
+        }
+
+        .form-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 12px;
+        }
+
+        .field {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .field label {
+            font-size: 11px;
+            font-weight: bold;
+            color: var(--schale-gray);
+        }
+
+        select, input {
+            padding: 8px;
+            border: 1px solid #ccd6dd;
+            border-radius: 4px;
+            font-size: 14px;
+            color: var(--ba-dark-blue);
+            outline: none;
+            background: white;
+        }
+
+        select:disabled {
+            background-color: #f0f0f0;
+            color: #8899a6;
+            cursor: not-allowed;
+        }
+
+        select:focus, input:focus {
+            border-color: var(--ba-blue);
+        }
+
+        .info-text {
+            font-size: 11px;
+            color: #8899a6;
+            margin-top: 4px;
+            line-height: 1.4;
+        }
+
+        /* Cost Table Preview */
+        .cost-preview {
+            margin-top: 10px;
+            font-size: 12px;
+            display: flex;
+            justify-content: space-between;
+            border-top: 1px dashed #ccd6dd;
+            padding-top: 10px;
+        }
+
+        .cost-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        .cost-label { color: #8899a6; font-size: 10px; }
+        .cost-num { font-weight: bold; color: var(--ba-dark-blue); }
+
+        footer {
+            margin-top: auto;
+            text-align: center;
+            font-size: 10px;
+            color: #aab6c3;
+            padding-top: 20px;
+        }
+
+        @media (max-width: 400px) {
+            .form-row { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <div class="header">
+        <div class="header-title">ELIGMA CALCULATOR</div>
+        <div class="header-sub">SYSTEM: ONLINE<br>ELIGMA CALCULATION UNIT</div>
+    </div>
+
+    <!-- Result Display -->
+    <div class="result-panel">
+        <div class="result-label">必要な「神名のカケラ」合計</div>
+        <div class="result-main">
+            <span class="result-value" id="total-cost">0</span>
+            <span class="result-unit">個</span>
+        </div>
+        <div class="cost-preview">
+            <div class="cost-item">
+                <span class="cost-label">必要文字数</span>
+                <span class="cost-num" id="needed-fragments">0</span>
+            </div>
+            <div class="cost-item">
+                <span class="cost-label">現在のレート</span>
+                <span class="cost-num" id="current-price-display">1</span>
+            </div>
+            <div class="cost-item">
+                <span class="cost-label">終了時の単価</span>
+                <span class="cost-num" id="end-price">1</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Target Settings -->
+    <div>
+        <span class="section-title">育成目標</span>
+        <div class="input-card">
+            <div class="form-row">
+                <div class="field">
+                    <label>現在の段階</label>
+                    <select id="cur-rank">
+                        <option value="1">星1</option>
+                        <option value="2">星2</option>
+                        <option value="3" selected>星3</option>
+                        <option value="4">星4</option>
+                        <option value="5">星5</option>
+                        <option value="6">固有1</option>
+                        <option value="7">固有2</option>
+                        <option value="8">固有3</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label>目標の段階</label>
+                    <select id="tar-rank">
+                        <option value="1">星1</option>
+                        <option value="2">星2</option>
+                        <option value="3">星3</option>
+                        <option value="4">星4</option>
+                        <option value="5" selected>星5</option>
+                        <option value="6">固有1</option>
+                        <option value="7">固有2</option>
+                        <option value="8">固有3</option>
+                        <option value="9">固有4</option>
+                    </select>
+                </div>
+            </div>
+            <div class="field">
+                <label>現在持っている「神名文字」</label>
+                <input type="number" id="owned-fragments" value="0" min="0">
+            </div>
+        </div>
+    </div>
+
+    <!-- Rate Settings -->
+    <div>
+        <span class="section-title">ショップの現在のレート</span>
+        <div class="input-card">
+            <div class="form-row">
+                <div class="field">
+                    <label>現在のレート</label>
+                    <select id="current-rate">
+                        <option value="1">1 (1カケラ/文字)</option>
+                        <option value="2">2 (2カケラ/文字)</option>
+                        <option value="3">3 (3カケラ/文字)</option>
+                        <option value="4">4 (4カケラ/文字)</option>
+                        <option value="5">5 (5カケラ/文字)</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label id="rate-remaining-label">そのレートで買える残り</label>
+                    <select id="rate-remaining">
+                        <!-- JSで生成 -->
+                    </select>
+                </div>
+            </div>
+            <div id="rate-info" class="info-text">
+                ショップの「MAX」ボタンを押した際に表示される情報を入力してください。
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        &copy; 2026 SCHALE REPORT MANAGEMENT SYSTEM
+    </footer>
+</div>
+
+<script>
+    // 各段階への昇格に必要な神名文字数
+    const RANK_UP_NEEDS = {
+        2: 30,  // ★1→2
+        3: 80,  // ★2→3
+        4: 100, // ★3→4
+        5: 120, // ★4→5
+        6: 0,   // ★5→固有1
+        7: 120, // 固有1→2
+        8: 180, // 固有2→3
+        9: 200  // 固有3→4
+    };
+
+    // 残り個数セレクトボックスの初期化
+    const rateRemSelect = document.getElementById('rate-remaining');
+    function updateRateRemainingOptions() {
+        const currentRate = parseInt(document.getElementById('current-rate').value);
+        const prevValue = rateRemSelect.value;
+        
+        rateRemSelect.innerHTML = '';
+        
+        if (currentRate === 5) {
+            // レート5の場合は0固定
+            const opt = document.createElement('option');
+            opt.value = 0;
+            opt.innerText = '0個 (上限なし)';
+            rateRemSelect.appendChild(opt);
+            rateRemSelect.disabled = true;
+            document.getElementById('rate-remaining-label').style.opacity = '0.5';
+            document.getElementById('rate-info').innerText = 'レート5は最終段階のため、残り個数の制限はありません。';
+        } else {
+            // レート1-4の場合は20〜1個の選択肢
+            for (let i = 20; i >= 1; i--) {
+                const opt = document.createElement('option');
+                opt.value = i;
+                opt.innerText = i + '個';
+                rateRemSelect.appendChild(opt);
+            }
+            rateRemSelect.disabled = false;
+            document.getElementById('rate-remaining-label').style.opacity = '1';
+            document.getElementById('rate-info').innerText = 'ショップの「MAX」ボタンを押した際に表示される情報を入力してください。';
+            
+            // 以前の値が有効なら保持、そうでなければ20
+            if (prevValue && prevValue > 0) {
+                rateRemSelect.value = prevValue;
+            } else {
+                rateRemSelect.value = 20;
+            }
+        }
+    }
+
+    /**
+     * レートと残り個数に基づいたコスト計算
+     */
+    function calculateEligmaCost(startRate, rateRemaining, amountToBuy) {
+        let totalCost = 0;
+        let currentRate = startRate;
+        let currentRateLeft = rateRemaining;
+        
+        if (currentRate === 5) {
+            return amountToBuy * 5;
+        }
+
+        for (let i = 0; i < amountToBuy; i++) {
+            totalCost += currentRate;
+            currentRateLeft--;
+            
+            if (currentRateLeft <= 0 && currentRate < 5) {
+                currentRate++;
+                currentRateLeft = 20;
+            }
+        }
+        return totalCost;
+    }
+
+    /**
+     * 終了時の単価を算出
+     */
+    function getEndPrice(startRate, rateRemaining, amountToBuy) {
+        if (amountToBuy === 0) return startRate;
+        let currentRate = startRate;
+        let currentRateLeft = rateRemaining;
+        
+        for (let i = 0; i < amountToBuy - 1; i++) {
+            currentRateLeft--;
+            if (currentRateLeft <= 0 && currentRate < 5) {
+                currentRate++;
+                currentRateLeft = 20;
+            }
+        }
+        return currentRate;
+    }
+
+    function calculate() {
+        const curRank = parseInt(document.getElementById('cur-rank').value);
+        const tarRank = parseInt(document.getElementById('tar-rank').value);
+        const ownedFragments = parseInt(document.getElementById('owned-fragments').value) || 0;
+        
+        const currentRate = parseInt(document.getElementById('current-rate').value);
+        const rateRemaining = parseInt(document.getElementById('rate-remaining').value);
+
+        // 必要文字数の合計
+        let totalFragmentsNeeded = 0;
+        if (tarRank > curRank) {
+            for (let r = curRank + 1; r <= tarRank; r++) {
+                totalFragmentsNeeded += (RANK_UP_NEEDS[r] || 0);
+            }
+        }
+
+        // 不足分
+        const netFragmentsToBuy = Math.max(0, totalFragmentsNeeded - ownedFragments);
+        
+        // コスト計算
+        const eligmaCost = calculateEligmaCost(currentRate, rateRemaining, netFragmentsToBuy);
+        const endPrice = getEndPrice(currentRate, rateRemaining, netFragmentsToBuy);
+
+        // UI表示
+        document.getElementById('total-cost').innerText = eligmaCost.toLocaleString();
+        document.getElementById('needed-fragments').innerText = netFragmentsToBuy.toLocaleString();
+        document.getElementById('current-price-display').innerText = currentRate;
+        document.getElementById('end-price').innerText = endPrice;
+
+        // 保存
+        localStorage.setItem('ba_eligma_calc_v3', JSON.stringify({
+            curRank, tarRank, ownedFragments, currentRate, rateRemaining
+        }));
+    }
+
+    // 初期化とイベント
+    document.getElementById('current-rate').addEventListener('change', () => {
+        updateRateRemainingOptions();
+        calculate();
+    });
+
+    ['cur-rank', 'tar-rank', 'owned-fragments', 'rate-remaining'].forEach(id => {
+        const el = document.getElementById(id);
+        el.addEventListener('change', calculate);
+        el.addEventListener('input', calculate);
+    });
+
+    window.onload = () => {
+        updateRateRemainingOptions();
+        const saved = localStorage.getItem('ba_eligma_calc_v3');
+        if (saved) {
+            const data = JSON.parse(saved);
+            document.getElementById('cur-rank').value = data.curRank;
+            document.getElementById('tar-rank').value = data.tarRank;
+            document.getElementById('owned-fragments').value = data.ownedFragments;
+            document.getElementById('current-rate').value = data.currentRate;
+            updateRateRemainingOptions(); // レート設定後に選択肢を再更新
+            document.getElementById('rate-remaining').value = data.rateRemaining;
+        }
+        calculate();
+    };
+</script>
+
+</body>
+</html>
