@@ -80,6 +80,8 @@
             padding: 20px;
             text-align: center;
             box-shadow: 4px 4px 0px var(--ba-blue);
+            position: relative;
+            overflow: hidden;
         }
 
         .result-label {
@@ -94,6 +96,7 @@
             justify-content: center;
             align-items: baseline;
             gap: 8px;
+            margin-bottom: 15px;
         }
 
         .result-value {
@@ -108,7 +111,49 @@
             font-weight: bold;
         }
 
+        /* Breakdown List */
+        .breakdown-container {
+            background-color: var(--ba-light-blue);
+            border-radius: 6px;
+            padding: 10px;
+            margin-bottom: 15px;
+            text-align: left;
+            font-size: 13px;
+            display: none; /* 初期状態は非表示 */
+        }
+
+        .breakdown-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 4px 0;
+            border-bottom: 1px dashed rgba(0, 187, 255, 0.2);
+        }
+        .breakdown-row:last-child {
+            border-bottom: none;
+        }
+        .breakdown-label {
+            color: var(--schale-gray);
+            font-weight: bold;
+        }
+        .breakdown-value {
+            color: var(--ba-dark-blue);
+            font-family: 'Exo 2', sans-serif;
+            font-weight: bold;
+        }
+        .breakdown-sub {
+            font-size: 11px;
+            color: #8899a6;
+            margin-left: 5px;
+        }
+
         /* Input Sections */
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
         .section-title {
             font-size: 13px;
             font-weight: bold;
@@ -117,7 +162,21 @@
             padding: 4px 12px;
             border-radius: 4px;
             display: inline-block;
-            margin-bottom: 12px;
+        }
+
+        .reset-btn {
+            font-size: 11px;
+            color: var(--ba-blue);
+            background: none;
+            border: 1px solid var(--ba-blue);
+            border-radius: 12px;
+            padding: 2px 10px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .reset-btn:hover {
+            background: var(--ba-blue);
+            color: white;
         }
 
         .input-card {
@@ -220,6 +279,12 @@
             <span class="result-value" id="total-cost">0</span>
             <span class="result-unit">個</span>
         </div>
+        
+        <!-- 内訳表示エリア -->
+        <div id="breakdown-area" class="breakdown-container">
+            <!-- JSで動的に追加されます -->
+        </div>
+
         <div class="cost-preview">
             <div class="cost-item">
                 <span class="cost-label">必要文字数</span>
@@ -238,7 +303,9 @@
 
     <!-- Target Settings -->
     <div>
-        <span class="section-title">育成目標</span>
+        <div class="section-header">
+            <span class="section-title">育成目標</span>
+        </div>
         <div class="input-card">
             <div class="form-row">
                 <div class="field">
@@ -278,7 +345,10 @@
 
     <!-- Rate Settings -->
     <div>
-        <span class="section-title">ショップの現在のレート</span>
+        <div class="section-header">
+            <span class="section-title">ショップの現在のレート</span>
+            <button id="reset-rate-btn" class="reset-btn" title="レートを初期値(1)に戻します">リセット</button>
+        </div>
         <div class="input-card">
             <div class="form-row">
                 <div class="field">
@@ -316,10 +386,15 @@
         3: 80,  // ★2→3
         4: 100, // ★3→4
         5: 120, // ★4→5
-        6: 0,   // ★5→固有1
+        6: 0,   // ★5→固有1 (必要数0だが段階として存在)
         7: 120, // 固有1→2
         8: 180, // 固有2→3
-        9: 200  // 固有3→4
+        9: 200  // 固有3→4 (仮)
+    };
+
+    const RANK_NAMES = {
+        1: '星1', 2: '星2', 3: '星3', 4: '星4', 5: '星5',
+        6: '固有1', 7: '固有2', 8: '固有3', 9: '固有4'
     };
 
     // 残り個数セレクトボックスの初期化
@@ -361,15 +436,24 @@
     }
 
     /**
-     * レートと残り個数に基づいたコスト計算
+     * 指定されたレート状態から、指定枚数を購入した際のコストと、
+     * 購入後のレート状態を返すシミュレーション関数
      */
-    function calculateEligmaCost(startRate, rateRemaining, amountToBuy) {
+    function simulatePurchase(startRate, rateRemaining, amountToBuy) {
+        if (amountToBuy <= 0) {
+            return { cost: 0, endRate: startRate, endRem: rateRemaining };
+        }
+
         let totalCost = 0;
         let currentRate = startRate;
         let currentRateLeft = rateRemaining;
         
         if (currentRate === 5) {
-            return amountToBuy * 5;
+            return { 
+                cost: amountToBuy * 5, 
+                endRate: 5, 
+                endRem: 0 
+            };
         }
 
         for (let i = 0; i < amountToBuy; i++) {
@@ -381,61 +465,109 @@
                 currentRateLeft = 20;
             }
         }
-        return totalCost;
-    }
 
-    /**
-     * 終了時の単価を算出
-     */
-    function getEndPrice(startRate, rateRemaining, amountToBuy) {
-        if (amountToBuy === 0) return startRate;
-        let currentRate = startRate;
-        let currentRateLeft = rateRemaining;
-        
-        for (let i = 0; i < amountToBuy - 1; i++) {
-            currentRateLeft--;
-            if (currentRateLeft <= 0 && currentRate < 5) {
-                currentRate++;
-                currentRateLeft = 20;
-            }
-        }
-        return currentRate;
+        return {
+            cost: totalCost,
+            endRate: currentRate,
+            endRem: currentRateLeft
+        };
     }
 
     function calculate() {
         const curRank = parseInt(document.getElementById('cur-rank').value);
         const tarRank = parseInt(document.getElementById('tar-rank').value);
-        const ownedFragments = parseInt(document.getElementById('owned-fragments').value) || 0;
+        let ownedFragments = parseInt(document.getElementById('owned-fragments').value) || 0;
         
-        const currentRate = parseInt(document.getElementById('current-rate').value);
-        const rateRemaining = parseInt(document.getElementById('rate-remaining').value);
+        let simRate = parseInt(document.getElementById('current-rate').value);
+        let simRateRem = parseInt(document.getElementById('rate-remaining').value);
 
-        // 必要文字数の合計
-        let totalFragmentsNeeded = 0;
+        // UI要素
+        const breakdownArea = document.getElementById('breakdown-area');
+        breakdownArea.innerHTML = '';
+        let showBreakdown = false;
+
+        let totalCost = 0;
+        let totalFragmentsNeeded = 0; // 純粋な必要合計数（所持分を引く前）
+        let actualFragmentsToBuyTotal = 0; // 実際に買う合計数
+
+        // 目標ランクが現在ランクより高い場合のみ計算
         if (tarRank > curRank) {
+            showBreakdown = true;
+
             for (let r = curRank + 1; r <= tarRank; r++) {
-                totalFragmentsNeeded += (RANK_UP_NEEDS[r] || 0);
+                const needs = RANK_UP_NEEDS[r] || 0;
+                if (needs === 0) continue; // 固有1などはカケラ不要なためスキップ
+
+                totalFragmentsNeeded += needs;
+
+                // 所持分を充当
+                const useOwned = Math.min(ownedFragments, needs);
+                const buy = needs - useOwned;
+                
+                // 所持分を減らす（次の段階のために）
+                ownedFragments -= useOwned;
+                actualFragmentsToBuyTotal += buy;
+
+                // この段階のコスト計算とレート更新
+                const result = simulatePurchase(simRate, simRateRem, buy);
+                
+                // 加算
+                totalCost += result.cost;
+                
+                // 次のループのためにレート状態を更新
+                simRate = result.endRate;
+                simRateRem = result.endRem;
+
+                // 内訳表示の行を追加 (コストが発生する場合、または最終目標の場合などに表示)
+                // ここでは各ステップを表示
+                const row = document.createElement('div');
+                row.className = 'breakdown-row';
+                
+                const labelText = `${RANK_NAMES[r]} まで`;
+                
+                // コストの内訳文字列
+                let valueText = `${result.cost.toLocaleString()} 個`;
+                if (buy > 0 && result.cost > 0) {
+                     // 段階的なコストが見えるようにする
+                     // ここでの result.cost は「この段階を上げるためだけにかかったコスト」
+                     valueText = `+ ${result.cost.toLocaleString()} 個`;
+                } else if (buy === 0) {
+                    valueText = `0 個 (所持分で達成)`;
+                }
+
+                row.innerHTML = `
+                    <span class="breakdown-label">${labelText}</span>
+                    <span class="breakdown-value">${valueText}</span>
+                `;
+                breakdownArea.appendChild(row);
             }
         }
 
-        // 不足分
-        const netFragmentsToBuy = Math.max(0, totalFragmentsNeeded - ownedFragments);
-        
-        // コスト計算
-        const eligmaCost = calculateEligmaCost(currentRate, rateRemaining, netFragmentsToBuy);
-        const endPrice = getEndPrice(currentRate, rateRemaining, netFragmentsToBuy);
+        // 内訳の表示切り替え
+        breakdownArea.style.display = showBreakdown ? 'block' : 'none';
 
-        // UI表示
-        document.getElementById('total-cost').innerText = eligmaCost.toLocaleString();
-        document.getElementById('needed-fragments').innerText = netFragmentsToBuy.toLocaleString();
-        document.getElementById('current-price-display').innerText = currentRate;
-        document.getElementById('end-price').innerText = endPrice;
+        // UI更新
+        document.getElementById('total-cost').innerText = totalCost.toLocaleString();
+        document.getElementById('needed-fragments').innerText = actualFragmentsToBuyTotal.toLocaleString();
+        
+        // 最終的なレート表示
+        document.getElementById('current-price-display').innerText = document.getElementById('current-rate').value; // 開始時のレートを表示
+        document.getElementById('end-price').innerText = simRate; // シミュレーション終了時のレート
 
         // 保存
         localStorage.setItem('ba_eligma_calc_v3', JSON.stringify({
-            curRank, tarRank, ownedFragments, currentRate, rateRemaining
+            curRank, tarRank, ownedFragments: document.getElementById('owned-fragments').value,
+            currentRate: document.getElementById('current-rate').value,
+            rateRemaining: document.getElementById('rate-remaining').value
         }));
     }
+
+    // リセットボタンの機能
+    document.getElementById('reset-rate-btn').addEventListener('click', () => {
+        document.getElementById('current-rate').value = "1";
+        updateRateRemainingOptions(); // これでrate-remainingも初期化される
+        calculate(); // 再計算
+    });
 
     // 初期化とイベント
     document.getElementById('current-rate').addEventListener('change', () => {
@@ -454,12 +586,14 @@
         const saved = localStorage.getItem('ba_eligma_calc_v3');
         if (saved) {
             const data = JSON.parse(saved);
-            document.getElementById('cur-rank').value = data.curRank;
-            document.getElementById('tar-rank').value = data.tarRank;
-            document.getElementById('owned-fragments').value = data.ownedFragments;
-            document.getElementById('current-rate').value = data.currentRate;
+            if(data.curRank) document.getElementById('cur-rank').value = data.curRank;
+            if(data.tarRank) document.getElementById('tar-rank').value = data.tarRank;
+            if(data.ownedFragments) document.getElementById('owned-fragments').value = data.ownedFragments;
+            if(data.currentRate) document.getElementById('current-rate').value = data.currentRate;
+            
             updateRateRemainingOptions(); // レート設定後に選択肢を再更新
-            document.getElementById('rate-remaining').value = data.rateRemaining;
+            
+            if(data.rateRemaining) document.getElementById('rate-remaining').value = data.rateRemaining;
         }
         calculate();
     };
